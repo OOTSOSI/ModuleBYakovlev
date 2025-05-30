@@ -1,0 +1,95 @@
+Сконфигурируйте ansible на сервере BR-SRV
+•	Сформируйте файл инвентаря, в инвентарь должны входить HQ-SRV, HQ-CLI, HQ-RTR и BR-RTR
+•	Рабочий каталог ansible должен располагаться в /etc/ansible
+•	Все указанные машины должны без предупреждений и ошибок отвечать pong на команду ping в ansible посланную с BR-SRV
+
+Решение 
+
+НА HQ-CLI СОЗДАЁМ ПОЛЬЗОВАТЕЛЯ SSHUSER
+
+Создаем самого пользователя:
+useradd sshuser -u 1010
+опция -u позволяет указать идентификатор пользователя сразу при создании
+
+Задаем пароль:
+passwd sshuser
+
+ТАК ЖЕ НАСТРАИВАЕМ УДАЛЁННОЕ ПОДКЛЮЧЕНИЕ
+
+Приводим указанные строки в файле /etc/openssh/sshd_config к следующим значениям:
+Port 2024
+MaxAuthTries 2
+PubkeyAuthentication yes
+PasswordAuthentication yes
+Banner /etc/openssh/bannermotd
+AllowUsers  sshuser
+В параметре AllowUsers вместо пробела используется Tab
+
+Создаем файл bannermotd:
+----------------------
+Authorized access only
+----------------------
+
+Перезагружаем службу:
+systemctl restart sshd
+ 
+ДАЛЬШЕ ПЕРЕХОДИМ НА BR-SRV
+Конфигурация SSH Alt Linux
+Затронутые строки в конфигурационном файле SSH /etc/openssh/sshd_config должны выглядеть следующим образом:
+Port 2024
+MaxAuthTries 2
+PubkeyAuthentication yes
+PasswordAuthentication yes
+Banner /etc/openssh/bannermotd
+AllowUsers  sshuser
+
+Конфигурация Ansible
+
+Устанавливаем необходимые пакеты:
+apt-get install -y ansible sshpass
+
+Редактируем указанные строки в конфигурационном файле /etc/ansible/ansible.cfg:
+inventory = ./inventory.yml
+host_key_checking = False
+
+Экспортируем переменную отключение проверки ключа хоста:
+export ANSIBLE_HOST_KEY_CHECKING=False
+
+Далее заполняем инвентарный файл /etc/ansible/inventory.yml:
+
+all:
+  children:
+    Networking:
+      hosts:
+        hq-rtr:
+        br-rtr:
+    Servers:
+      hosts:
+        hq-srv:
+          ansible_host: 192.168.100.62
+          ansible_port: 2024
+    Clients:
+      hosts:
+        hq-cli:
+          ansible_host: 192.168.200.14
+          ansible_port: 2024
+ 
+Создаем файлы с переменными для всех категорий и для категории Networking:
+cd /etc/ansible
+mkdir group_vars
+touch group_vars/{all.yml,Networking.yml}
+
+Редактируем их:
+all.yml:
+ansible_ssh_user: sshuser
+ansible_ssh_pass: P@ssw0rd
+ansible_python_interpreter: /usr/bin/python3
+
+Networking.yml
+
+ansible_connection: network_cli
+ansible_network_os: ios
+
+Выполняем команду для ping`а всех машин:
+ansible -m ping all
+

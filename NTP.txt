@@ -1,0 +1,57 @@
+Скачиваем пакет chrony:
+apt-get install -y chrony
+
+Приводим начало файла /etc/chrony.conf к следующему виду:
+# Use public servers from the pool.ntp.org project.
+# Please consider joining the pool (https://www.pool.ntp.org/join.html
+#pool pool.ntp.org iburst
+
+server 127.0.0.1 iburst prefer
+hwtimestamp *
+local stratum 5
+allow 0/0
+
+Запускаем и добавляем в автозагрузку утилиту chronyd:
+systemctl enable --now chronyd
+
+Проверка конфигурации NTP-сервера
+Получаем вывод источников времени с помощью команды:
+chronyc sources
+
+Получаем вывод уровня стратума с помощью связки команд:
+chronyc tracking | grep Stratum
+
+Конфигурация NTP-клиента EcoRouter
+Указываем IP-адрес NTP-сервера:
+ntp server 192.168.0.30 (или другой актуальный адрес)
+
+Указываем часовой пояс:
+ntp timezone utc+4
+
+Проверка конфигурации NTP-клиента EcoRouter
+Проверяем командой:
+show ntp status
+
+Вывод:
+Status Description
+*      best
++      sync
+-      failed
+?      unknown
+
+----------------------------------------------------------------------------------------------------
+Status  |  VR name  |  Server  |  Stratum  |  Delay  |  Version  |  Offset  |  Last  |  Source IP
+----------------------------------------------------------------------------------------------------
+       *|    default|192.168.3.10|          5|   0.0391|          4|    0.0036|    3:26|        
+
+
+Конфигурация NTP-клиента Alt Linux
+Скачиваем пакет chrony:
+apt-get install chrony
+
+Приводим начало файла /etc/chrony.conf к следующему виду:
+#pool pool.ntp.org iburst
+server 192.168.3.10 iburst prefer
+
+Запускаем утилиту chrony и добавляем ее в автозагрузку:
+systemctl enable --now chronyd
